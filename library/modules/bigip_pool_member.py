@@ -1266,7 +1266,30 @@ class ModuleManager(object):
             return False
         if resp.status == 404 or 'code' in response and response['code'] == 404:
             return False
-        return True
+
+        return self.in_members_list()
+
+    def in_members_list(self):
+
+        uri = "https://{0}:{1}/mgmt/tm/ltm/pool/{2}/members".format(
+            self.client.provider['server'],
+            self.client.provider['server_port'],
+            transform_name(name=fq_name(self.want.partition, self.want.pool)),
+        )
+        resp = self.client.api.get(uri)
+        try:
+            response = resp.json()
+        except ValueError:
+            return False
+        if resp.status == 404 or 'code' in response and response['code'] == 404:
+            return False
+
+        members = []
+        if 'items' in response:
+            items = response['items']
+            members = [member for member in items if 'fullPath' in member and member['fullPath'] == self.want.full_name]
+
+        return len(members) > 0
 
     def pool_exist(self):
         if self.replace_all_with:
